@@ -4,12 +4,11 @@ from __future__ import annotations
 
 from collections.abc import Iterable
 
-from headroom.install.runtime import resolve_headroom_command
-
 from .base import MCPRegistrar, RegisterResult, RegisterStatus, ServerSpec
 from .claude import ClaudeRegistrar
 from .codex import CodexRegistrar
 from .opencode import OpencodeRegistrar
+from .antigravity import AntigravityRegistrar
 
 #: Default proxy URL used when none is given.
 DEFAULT_PROXY_URL = "http://127.0.0.1:8787"
@@ -20,7 +19,7 @@ def get_all_registrars() -> list[MCPRegistrar]:
 
     The list grows as we add adapters for Cursor, Continue, Cline, etc.
     """
-    return [ClaudeRegistrar(), CodexRegistrar(), OpencodeRegistrar()]
+    return [ClaudeRegistrar(), CodexRegistrar(), OpencodeRegistrar(), AntigravityRegistrar()]
 
 
 def build_headroom_spec(proxy_url: str = DEFAULT_PROXY_URL) -> ServerSpec:
@@ -29,14 +28,27 @@ def build_headroom_spec(proxy_url: str = DEFAULT_PROXY_URL) -> ServerSpec:
     The spec is identical across agents — every JSON/TOML registrar
     serializes the same shape into its own format.
     """
+    import shutil
+    import sys
+    from pathlib import Path
+
+    command = "headroom"
+    # Resolve absolute path to headroom command to avoid PATH lookup failures in GUI agents.
+    headroom_bin = shutil.which("headroom")
+    if headroom_bin:
+        command = headroom_bin
+    else:
+        argv0 = sys.argv[0]
+        if argv0 and Path(argv0).is_absolute() and Path(argv0).name == "headroom":
+            command = str(Path(argv0).resolve())
+
     env: dict[str, str] = {}
     if proxy_url and proxy_url != DEFAULT_PROXY_URL:
         env["HEADROOM_PROXY_URL"] = proxy_url
-    command = resolve_headroom_command()
     return ServerSpec(
         name="headroom",
-        command=command[0],
-        args=(*command[1:], "mcp", "serve"),
+        command=command,
+        args=("mcp", "serve"),
         env=env,
     )
 

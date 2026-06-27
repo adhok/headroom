@@ -52,15 +52,33 @@ class _FakeRegistrar(MCPRegistrar):
 
 
 def test_build_spec_default_proxy_no_env(monkeypatch) -> None:
-    monkeypatch.setattr(
-        "headroom.mcp_registry.install.resolve_headroom_command",
-        lambda: ["/opt/headroom/bin/headroom"],
-    )
+    monkeypatch.setattr("shutil.which", lambda name: None)
+    monkeypatch.setattr("sys.argv", ["/not/headroom"])
     spec = build_headroom_spec()
     assert spec.name == "headroom"
-    assert spec.command == "/opt/headroom/bin/headroom"
+    assert spec.command == "headroom"
     assert spec.args == ("mcp", "serve")
     assert spec.env == {}
+
+
+def test_build_spec_resolves_via_which(monkeypatch) -> None:
+    monkeypatch.setattr("shutil.which", lambda name: "/bin/headroom" if name == "headroom" else None)
+    spec = build_headroom_spec()
+    assert spec.command == "/bin/headroom"
+
+
+def test_build_spec_resolves_via_argv0(monkeypatch) -> None:
+    monkeypatch.setattr("shutil.which", lambda name: None)
+    monkeypatch.setattr("sys.argv", ["/venv/bin/headroom"])
+    spec = build_headroom_spec()
+    assert spec.command == "/venv/bin/headroom"
+
+
+def test_build_spec_fallback_when_not_found(monkeypatch) -> None:
+    monkeypatch.setattr("shutil.which", lambda name: None)
+    monkeypatch.setattr("sys.argv", ["/venv/bin/other-script"])
+    spec = build_headroom_spec()
+    assert spec.command == "headroom"
 
 
 def test_build_spec_custom_proxy_sets_env() -> None:
@@ -70,17 +88,6 @@ def test_build_spec_custom_proxy_sets_env() -> None:
 
 def test_build_spec_default_url_omits_env() -> None:
     spec = build_headroom_spec(DEFAULT_PROXY_URL)
-    assert spec.env == {}
-
-
-def test_build_spec_falls_back_to_python_module_when_no_binary(monkeypatch) -> None:
-    monkeypatch.setattr("headroom.install.runtime.shutil.which", lambda name: None)
-    monkeypatch.setattr("headroom.install.runtime.sys.executable", "/usr/bin/python")
-
-    spec = build_headroom_spec()
-
-    assert spec.command == "/usr/bin/python"
-    assert spec.args == ("-m", "headroom.cli", "mcp", "serve")
     assert spec.env == {}
 
 

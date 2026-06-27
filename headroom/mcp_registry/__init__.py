@@ -16,6 +16,7 @@ from __future__ import annotations
 from .base import MCPRegistrar, RegisterResult, RegisterStatus, ServerSpec
 from .claude import ClaudeRegistrar
 from .codex import CodexRegistrar
+from .antigravity import AntigravityRegistrar
 from .display import any_succeeded, format_result, format_results
 from .install import (
     DEFAULT_PROXY_URL,
@@ -31,6 +32,7 @@ __all__ = [
     "DEFAULT_PROXY_URL",
     "ClaudeRegistrar",
     "CodexRegistrar",
+    "AntigravityRegistrar",
     "MCPRegistrar",
     "OpencodeRegistrar",
     "RegisterResult",
